@@ -15,6 +15,9 @@ from torchvision import transforms
 
 class App:
     def __init__(self):
+        self.net = Net()
+        self.net.load_state_dict(torch.load('net.pth'))
+        self.resize = transforms.Resize([28, 28], antialias=True)
         self.line_id = None
         self.line_points = []
         self.root = tk.Tk()
@@ -23,6 +26,9 @@ class App:
         self.canvas = tk.Canvas(height=368, width=368, relief='groove', bd=2)
         self.canvas.pack()
         self.text = tk.StringVar(self.root, '数字:')
+        tk.Label(self.root, textvariable=self.text, font=('microsoft yahei', 15)).pack(side='left')
+        tk.Button(self.root, text='clear', font=('microsoft yahei', 15),
+                  command=lambda: self.canvas.delete(tk.ALL)).pack(side='right')
         self.canvas.bind('<Button-1>', self.set_start)
         self.canvas.bind('<B1-Motion>', self.draw_line)
         self.canvas.bind('<ButtonRelease-1>', self.end_line)
@@ -40,6 +46,9 @@ class App:
     def end_line(self, _):
         self.line_points.clear()
         self.line_id = None
+        img = np.array(Image.open(io.BytesIO(self.canvas.postscript(colormode='mono').encode('utf-8'))))[:, :, 0]
+        a = self.net(self.resize(torch.tensor(img / -255 + 1)[None]).float())
+        self.text.set(f'数字:{int(torch.argmax(a))}')
 
 
 class Net(nn.Module):
